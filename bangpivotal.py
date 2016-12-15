@@ -1,5 +1,18 @@
 '''
 This function handles a Slack !pivotal command to add stories to pivotaltracker
+
+You will need to set 2 Environment Variables in your AWS Lambda Function.
+
+Environment Variable            Value
+--------------------            -----
+slack_token                     Your Slack outgoing webhook token
+pivotal_token                   Your PivotalTracker API token
+
+Steps:
+1) Run the script from the root of the git repo to create the bundle.zip
+    chmod +x bundleit.sh && ./bundleit.sh
+2) Run the following aws command to upload bundle.zip to the lambda function
+    aws lambda update-function-code --zip-file fileb://bundle.zip --function-name FUNCTION_NAME    
 '''
 
 import json
