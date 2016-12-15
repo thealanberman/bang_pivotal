@@ -2,13 +2,12 @@
 This function handles a Slack !pivotal command to add stories to pivotaltracker
 '''
 
-import boto3
 import json
-import logging
 import requests
-import re
-
 from urlparse import parse_qs
+import re
+import os
+import logging
 
 slack_token = os.environ['slack_token']
 pivotal_token = os.environ['pivotal_token']
@@ -78,7 +77,7 @@ def parse_command_text(command_text):
 
     # check and correct formatting of command_text if necessary
     if command_text.count(';') == 0:
-        message = help_response()
+        return { 'status': status, 'message': help_response() }
     elif command_text.count(';') == 1:
         command_text += ";"
 
@@ -89,7 +88,7 @@ def parse_command_text(command_text):
     description = command_args[2].strip()
 
     if len(project_ids['matches']) == 0:
-        message = "No matches found"
+        return { 'status': status, 'message': help_response() }
     elif len(project_ids['matches']) > 1:
         message = "Sorry, you need to be more specific. Did you mean one of these?\n%s" % ", ".join(project_ids['names'])
     else:
@@ -100,22 +99,29 @@ def parse_command_text(command_text):
 
 
 def lambda_handler(event, context):
+    # logger.info('got event: {}'.format(event))
+    # logger.error('something went wrong')
     params = parse_qs(event['body'])
+    # logger.info('got params: {}'.format(params))
     token = params['token'][0]
+    # logger.info('got token: {}'.format(token))
     if token != slack_token:
         logger.error("Request token (%s) does not match expected", token)
         return respond(Exception('Invalid request token'))
 
     user = params['user_name'][0]
-    command = params['command'][0]
+    command = params['trigger_word'][0]
+    # logger.info('got command: {}'.format(command))
     channel = params['channel_name'][0]
-    command_text = params['text'][0]
+    command_text = params['text'][0].replace(command, "", 1)
+    # logger.info('got command_text: {}'.format(command_text))
 
     action = parse_command_text(command_text)
 
     if action['status'] == True:
         story_name = "%s (from %s)" % (action['story'], user)
         add_story(action['pid'], story_name, action['description'])
+        # logger.info(action['message'])
         return respond(None, { 'text': action['message'], 'response_type': 'in_channel', 'user_name': 'PivotalTracker', 'icon_emoji': ':ghost:' } )
     else:
-        return respond(None, action['message'])
+        return respond(None, { 'text': action['message'], 'response_type': 'in_channel', 'user_name': 'PivotalTracker', 'icon_emoji': ':ghost:' })
