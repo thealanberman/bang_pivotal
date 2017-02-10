@@ -1,13 +1,12 @@
 '''
 This function handles a Slack !pivotal command to add stories to pivotaltracker.
 
-You will need to set 4 Environment Variables in your AWS Lambda Function.
+You will need to set 3 Environment Variables in your AWS Lambda Function.
 
 Environment Variable            Value
 --------------------            -----
 slack_token                     Your Slack outgoing webhook token
 pivotal_token                   Your PivotalTracker API token
-incoming_slack_url              Your Slack incoming webhook URL
 json_dictionary_url             The URL to your dictionary.json file (S3 storage with public-read recommended)
 
 Steps:
@@ -25,7 +24,6 @@ import os
 import logging
 
 slack_token = os.environ['slack_token']
-incoming_slack_url = os.environ['incoming_slack_url']
 pivotal_token = os.environ['pivotal_token']
 json_dictionary_url = os.environ['json_dictionary_url']
 
