@@ -35,10 +35,11 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-def get_pairings():
-    response = requests.get(json_dictionary_url)
-    return response.json()
+def get_pairing(channel):
+    return requests.get(json_dictionary_url).json()[channel]
 
+def get_project_name(pid):
+    return requests.get(pivotal_url + "/projects/" + pid, headers=pivotal_headers).json()['name']
 
 def help_response():
     message = "Specify a story name. Optional: add a description after a semicolon.\n"
@@ -79,7 +80,7 @@ def parse_command_text(command_text):
         story = command_args[0].strip()
         description = command_args[1].strip()
     else:
-        story = command_text
+        story = command_text.strip()
         description = None
     return {'status': True, 'message': message, 'story': story, 'description': description}
 
@@ -94,7 +95,8 @@ def lambda_handler(event, context):
     user = params['user_name'][0]
     command = params['trigger_word'][0]
     channel = params['channel_name'][0]
-    pid = get_pairings()[channel]
+    pid = get_pairing(channel)
+    project = get_project_name(pid)
     command_text = params['text'][0].replace(command, "", 1)
 
     # action object = {status,message,story,description}
@@ -103,7 +105,7 @@ def lambda_handler(event, context):
     if action['status'] == True:
         story_name = "%s (from %s)" % (action['story'], user)
         story_response = add_story(pid, story_name, action['description'])
-        message_text = "Story '%s' added!\n%s" % (action['story'], story_response['url'])
+        message_text = "Story *%s* added to *%s*.\n%s" % (action['story'], project, story_response['url'])
         return respond(None, {'text': message_text , 'response_type': 'in_channel', 'user_name': 'PivotalTracker'})
     else:
         return respond(None, {'text': action['message'], 'response_type': 'in_channel', 'user_name': 'PivotalTracker'})
