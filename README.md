@@ -2,68 +2,84 @@
 
 Creates the ability to add stories to PivotalTracker from Slack via a `!pivotal` trigger word.
 
+## Who is this for?
+
 Do you use Slack? Do you use PivotalTracker? Want to be able to quickly add stories to PivotalTracker from Slack?
 
-The function uses a simple JSON dictionary to create Slack Channel => Pivotal Project pairings.
+The function uses simple Slack Channel => Pivotal Project pairings. So, for example, you could have a Slack channel named #devops which had a corresponding DevOps Pivotal Project.
 
-So, for example, you could have a Slack channel named #devops which had a corresponding DevOps Pivotal Project. Quickly add stories to the project by simply typing "!pivotal clean up the code for the server" in the #devops channel.
+**Example Usage:** `!pivotal clean up the apache settings; our server isn't using https` in the #devops channel would create the story "clean up the apache settings" in the DevOps PivotalTracker project, with the description "our server isn't using https"
 
 The code in this repo is designed to run as an [AWS Lambda Function](https://aws.amazon.com/lambda)
 
 ## Prerequisites
 
-1. AWS account
-2. Slack admin account
+1. Privileges to create an AWS Lambda Function
+2. Privileges to add a custom Slack integration
 3. [awscli](https://aws.amazon.com/cli/) Installed
+4. A PivotalTracker API token
+    - [_Recommended_] Create a non-person account on PivotalTracker (e.g. a user named "Slack") This is because stories' underlying "created_by" field in PivotalTracker will be whatever account's API token is used.
 
-## The Short Instructions
+# Overview
 
-1. Create a `dictionary.json` file to define channel:project pairings.
-2. Upload the dictionary file to S3:
+1. Get PivotalTracker API token
+2. Create a `dictionary.json` file to define Channel=>Project pairings
+3. Upload the dictionary file to S3 with public-read permissions
+4. Create a `bangpivotal` Lambda
+5. Set 2 environment variables in the Lambda
+    - pivotal_token
+    - json_dictionary_url
+6. Add an API Gateway trigger
+7. Create a Slack Outgoing WebHook
+8. Point the Slack WebHook at the API Gateway trigger URL
+9. Set 3rd environment variable in the Lambda
+    - slack_token
+10. Bundle the code into bundle.zip
+11. Upload bundle.zip to Lambda
 
-  - `aws s3 cp dictionary.json s3://path/to/bucket --acl public-read`
-  - get the public URL for the uploaded file
+# Instructions
 
-3. Create a `bangpivotal` Lambda
+## Pairings Dictionary
 
-  - Add 3 environment variables
+The Pairings Dictionary is a simple JSON file containing key-value pairs where the Slack channel is the key and the value is the corresponding PivotalTracker project ID number.
 
-    - `slack_token`
-    - `pivotal_token`
-    - `json_dictionary_url`
+1. Clone the repo.
+2. Make a copy of `example_dictionary.json` and name it `dictionary.json`
+3. Edit `dictionary.json` to create whatever channel=>project pairings you want.
+    - You will need the PivotalTracker _project ID numbers_ (they're in the URLs)
+4. Store your `dictionary.json` in Amazon S3:
+    - `aws s3 cp dictionary.json s3://path/to/bucket --acl public-read`
+5. Get the web URL of the dictionary.json, you'll need it.
 
-  - Add an API Gateway trigger
+## AWS Lambda
 
-4. Create a Slack Outgoing WebHook
+The Lambda function needs 3 key pieces of information in order to function. The Slack token, the Pivotal token, and the URL of the pairings dictionary.
 
-  - get the token
-  - paste in the AWS API Gateway trigger URL
+1. Log in to the [AWS Console Lambda service](https://console.aws.amazon.com/lambda/).
+2. Create a new Lambda function named `bangpivotal`.
+3. Add an API Gateway trigger with "Open" security to `bangpivotal`.
+4. Copy the URL of the API Gateway, you'll need it.
+5. Add 3 environment variables to `bangpivotal`:
 
-## AWS Lambda Setup
+  - `slack_token` -- Get this value from your Slack outgoing webhook integration
+  - `pivotal_token` -- Get this value from PivotalTracker in the "Profile" settings
+  - `json_dictionary` -- This is the URL to your dictionary.json file in S3
 
-1. Clone the repo and `cd` into the directory.
-2. Run `./bundleit.sh` script to zip up the code into a file named `bundle.zip`
-3. Log in to the [AWS Console Lambda service](https://console.aws.amazon.com/lambda/).
-4. Create a new Lambda function named `bangpivotal`.
-5. Add an API Gateway with "Open" security to `bangpivotal`.
-6. Add 3 environment variables to `bangpivotal`:
+6. In the repo directory, run `./bundleit.sh` to zip up the code into a file named `bundle.zip`
+7. Upload the new bundle.zip:
+    - `aws lambda update-function-code --zip-file fileb://bundle.zip --function-name bangpivotal`
 
-  1. `slack_token` -- You will get this value from your Slack outgoing webhook integration.
-  2. `pivotal_token` -- You will get this value from your PivotalTracker profile.
-  3. `json_dictionary` -- You will need to store your pairings dictionary in a should be the URL to your JSON dictionary file.
+## Slack Outgoing WebHook
 
-7. Upload bundle.zip via awscli:<br>
-  `aws lambda update-function-code --zip-file fileb://bundle.zip --function-name bangpivotal`
+You will need to configure your Slack outgoing webhook to trigger on `!pivotal` and point it to the trigger API Gateway URL from the previous Lambda instructions.
 
-8. Configure your Slack outgoing webhook to trigger on `!pivotal` and point it to your API Gateway URL.
+### Steps
 
-  ### Steps
-
-  1. <https://YOURSLACK.slack.com/apps/build/custom-integration>
-  2. Outgoing WebHooks > Add Outgoing WebHooks integration
-  3. Channel: Any
-  4. Trigger Word(s): !pivotal
-  5. URL(s): [the API Gateway URL of your Lambda Function]
+1. Go to <https://YOURSLACK.slack.com/apps/build/custom-integration>
+2. Outgoing WebHooks > Add Outgoing WebHooks integration
+3. Channel: Any
+4. Trigger Word(s): `!pivotal`
+5. URL(s): [the API Gateway URL of your Lambda Function]
 
 ## Notes
 
