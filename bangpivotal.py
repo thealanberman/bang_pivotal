@@ -26,7 +26,7 @@ logger.setLevel(logging.INFO)
 
 
 def get_pairing(channel):
-    return requests.get(json_dictionary_url).json()[channel]
+    return requests.get(json_dictionary_url).json().get(channel)
 
 
 def get_project_name(pid):
@@ -38,6 +38,12 @@ def get_project_name(pid):
 def help_response():
     message = "Specify a story name. Optional: add a description after a semicolon.\n"
     message += "e.g. !pivotal Buy more ethernet cables; We are running out.\n"
+    return message
+
+
+def missing_pair_response():
+    message = "Pivotal integration hasn't been set up in this channel yet.\n"
+    message += "Ask your Slack admin about how to pair this channel with a Pivotal project.\n"
     return message
 
 
@@ -100,11 +106,13 @@ def lambda_handler(event, context):
     command = params['trigger_word'][0]
     channel = params['channel_name'][0]
     pid = get_pairing(channel)
-    project = get_project_name(pid)
-    command_text = params['text'][0].replace(command, "", 1)
 
-    # action object = {status,message,story,description}
-    action = parse_command_text(command_text)
+    if pid is None:
+        action = {'status': False, 'message': missing_pair_response()}
+    else:
+        project = get_project_name(pid)
+        command_text = params['text'][0].replace(command, "", 1)
+        action = parse_command_text(command_text)
 
     if action['status'] == True:
         story_name = "%s (from %s)" % (action['story'], user)
