@@ -56,17 +56,18 @@ The Pairings Dictionary is a simple JSON file containing key-value pairs where t
 The Lambda function needs 3 key pieces of information in order to function. The Slack token, the Pivotal token, and the URL of the pairings dictionary.
 
 1. Log in to the [AWS Console Lambda service](https://console.aws.amazon.com/lambda/).
-2. Create a new Lambda function named `bangpivotal`.
+2. Create a new blank Lambda function named `bangpivotal`.
 3. Add an API Gateway trigger with "Open" security to `bangpivotal`.
 4. Copy the URL of the API Gateway, you'll need it.
 5. Add 3 environment variables to `bangpivotal`:
 
   - `slack_token` -- Get this value from your Slack outgoing webhook integration
   - `pivotal_token` -- Get this value from PivotalTracker in the "Profile" settings
-  - `json_dictionary` -- This is the URL to your dictionary.json file in S3
+  - `json_dictionary_url` -- This is the URL to your dictionary.json file in S3
 
-6. In the repo directory, run `./bundleit.sh` to zip up the code into a file named `bundle.zip`
-7. Upload the new bundle.zip:
+6. Set the Lambda handler to be `bangpivotal.lambda_handler`.
+7. In the repo directory, run `./bundleit.sh` to zip up the code into a file named `bundle.zip`
+8. Upload the new bundle.zip:
     - `aws lambda update-function-code --zip-file fileb://bundle.zip --function-name bangpivotal`
 
 ## Slack Outgoing WebHook
