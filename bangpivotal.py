@@ -89,7 +89,8 @@ def parse_command_text(command_text):
 
 
 def lambda_handler(event, context):
-    params = parse_qs(event['body'])
+    # Encode back to bytes so parse_qs decodes unicode characters properly.
+    params = parse_qs(event['body'].encode('ASCII'))
     token = params['token'][0]
     if token != slack_token:
         logger.error("Request token (%s) does not match expected", token)
