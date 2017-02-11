@@ -15,8 +15,10 @@ slack_token = os.environ['slack_token']
 pivotal_token = os.environ['pivotal_token']
 json_dictionary_url = os.environ['json_dictionary_url']
 
-pivotal_headers = {"X-TrackerToken": pivotal_token,
-                   "Content-Type": "application/json"}
+pivotal_headers = {
+    "X-TrackerToken": pivotal_token,
+    "Content-Type": "application/json"
+}
 pivotal_url = "https://www.pivotaltracker.com/services/v5"
 
 logger = logging.getLogger()
@@ -26,8 +28,12 @@ logger.setLevel(logging.INFO)
 def get_pairing(channel):
     return requests.get(json_dictionary_url).json()[channel]
 
+
 def get_project_name(pid):
-    return requests.get(pivotal_url + "/projects/" + pid, headers=pivotal_headers).json()['name']
+    return requests.get(
+        pivotal_url + "/projects/" + pid,
+        headers=pivotal_headers).json()['name']
+
 
 def help_response():
     message = "Specify a story name. Optional: add a description after a semicolon.\n"
@@ -47,7 +53,11 @@ def respond(err, res=None):
 
 def add_story(pid, name, description):
     post_url = "%s/projects/%s/stories" % (pivotal_url, pid)
-    response = requests.post(post_url, headers=pivotal_headers, json={'name': name, 'description': description})
+    response = requests.post(
+        post_url,
+        headers=pivotal_headers,
+        json={'name': name,
+              'description': description})
     return response.json()
 
 
@@ -70,7 +80,12 @@ def parse_command_text(command_text):
     else:
         story = command_text.strip()
         description = None
-    return {'status': True, 'message': message, 'story': story, 'description': description}
+    return {
+        'status': True,
+        'message': message,
+        'story': story,
+        'description': description
+    }
 
 
 def lambda_handler(event, context):
@@ -93,7 +108,16 @@ def lambda_handler(event, context):
     if action['status'] == True:
         story_name = "%s (from %s)" % (action['story'], user)
         story_response = add_story(pid, story_name, action['description'])
-        message_text = "Story *%s* added to *%s*.\n%s" % (action['story'], project, story_response['url'])
-        return respond(None, {'text': message_text , 'response_type': 'in_channel', 'user_name': 'PivotalTracker'})
+        message_text = "Story *%s* added to *%s*.\n%s" % (
+            action['story'], project, story_response['url'])
+        return respond(None, {
+            'text': message_text,
+            'response_type': 'in_channel',
+            'user_name': 'PivotalTracker'
+        })
     else:
-        return respond(None, {'text': action['message'], 'response_type': 'in_channel', 'user_name': 'PivotalTracker'})
+        return respond(None, {
+            'text': action['message'],
+            'response_type': 'in_channel',
+            'user_name': 'PivotalTracker'
+        })
